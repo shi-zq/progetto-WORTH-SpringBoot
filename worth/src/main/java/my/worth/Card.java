@@ -3,7 +3,6 @@ package my.worth;
 import java.util.List;
 
 public class Card {
-    // Long 允许 null：新建且尚未保存的卡片还没有数据库 ID。
     private Long id;
     private Long ownerId;
     private String cardName;
@@ -16,7 +15,6 @@ public class Card {
         this.history = new History();
     }
 
-    // 从数据库恢复时沿用历史，不能再生成一条初始 TODO（这里是业务状态名）。
     static Card restore(long id, long ownerId, String name, String description,
                         List<HistoryEntry> entries) {
         return new Card(id, ownerId, name, description, new History(entries));

@@ -7,7 +7,6 @@ import java.util.List;
 public class History {
     private final List<HistoryEntry> history;
 
-    // 新卡片自动得到第一条 TODO 历史，当前状态由最后一条历史决定。
     public History() {
         history = new ArrayList<>();
         history.add(new HistoryEntry(LocalDateTime.now(), Status.TODO));

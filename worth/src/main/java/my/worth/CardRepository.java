@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-// 让 Spring 创建这个对象，并通过构造方法提供 JdbcTemplate。
 @Repository
 public class CardRepository {
     // 本类不判断当前登录用户；调用它的 Service 需要先检查访问权限。
@@ -30,7 +29,6 @@ public class CardRepository {
 
     // 新建卡片：卡片和初始历史必须一起保存，失败时一起回滚。
     @Transactional
-    // 运行时异常会回滚整个事务；正常结束才一起提交卡片和初始历史。
     public Card save(long ownerId, Card card) {
         if (card == null) {
             throw new IllegalArgumentException("Card cannot be null");
@@ -45,12 +43,10 @@ public class CardRepository {
         validateDetails(card.getCardName(), card.getDescription());
 
         String sql = "INSERT INTO cards (owner_id, name, description, status) VALUES (?, ?, ?, ?)";
-        // 数据库自动生成 ID；这个对象负责接收生成的 ID。
         GeneratedKeyHolder keyHolder = new GeneratedKeyHolder();
         PreparedStatementCreator statementCreator = new PreparedStatementCreator() {
             @Override
             public PreparedStatement createPreparedStatement(Connection connection) throws SQLException {
-                // Spring 提供连接；指定需要返回 id 列。
                 PreparedStatement statement = connection.prepareStatement(sql, new String[]{"id"});
                 statement.setLong(1, ownerId);
                 statement.setString(2, card.getCardName());
@@ -67,13 +63,11 @@ public class CardRepository {
         }
         long cardId = generatedId.longValue();
         insertHistory(cardId, history.get(0));
-        // 重新读取，返回带 ID 和数据库中实际保存时间的对象。
         return findById(cardId).orElseThrow();
     }
 
     // 卡片与历史分两次查询，保持同一次读取中的数据一致。
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
-    // readOnly 表达只读意图；REPEATABLE_READ 避免两次查询读到不一致的卡片与历史。
     public Optional<Card> findById(long cardId) {
         String sql = "SELECT * FROM cards WHERE id = ?";
         SqlRowSet rows = jdbcTemplate.queryForRowSet(sql, cardId);
@@ -99,7 +93,6 @@ public class CardRepository {
     public void updateDetails(long cardId, String name, String description) {
         validateDetails(name, description);
         String sql = "UPDATE cards SET name = ?, description = ? WHERE id = ?";
-        // update 返回受影响的行数；0 表示没有找到该 ID，而不是成功更新。
         int changedRows = jdbcTemplate.update(sql, name, description, cardId);
         checkCardExists(changedRows, cardId);
     }
@@ -114,7 +107,6 @@ public class CardRepository {
     @Transactional
     public Card updateStatus(long cardId, Status next) {
         Card card = lockCard(cardId);
-        // 在内存中校验转换；非法转换会抛异常，不执行后面的 SQL。
         card.updateStatus(next);
         String sql = "UPDATE cards SET status = ? WHERE id = ?";
         jdbcTemplate.update(sql, next.name(), cardId);
@@ -124,7 +116,6 @@ public class CardRepository {
         return findById(cardId).orElseThrow();
     }
 
-    // 是否允许删除，由以后的 Service 检查；这里提供数据库删除能力。
     @Transactional
     public void deleteById(long cardId) {
         lockCard(cardId);
@@ -143,7 +134,6 @@ public class CardRepository {
         return readCard(rows);
     }
 
-    // 读取当前行的每个字段，再组装 Card；调用前必须先执行 rows.next()。
     private Card readCard(SqlRowSet row) {
         long cardId = row.getLong("id");
         long ownerId = row.getLong("owner_id");
@@ -162,7 +152,6 @@ public class CardRepository {
         return Card.restore(cardId, ownerId, name, description, history);
     }
 
-    // 按历史 ID 排序，一行一行读取时间和状态。
     private List<HistoryEntry> findHistory(long cardId) {
         String sql = "SELECT occurred_at, status FROM card_history WHERE card_id = ? ORDER BY id";
         SqlRowSet rows = jdbcTemplate.queryForRowSet(sql, cardId);

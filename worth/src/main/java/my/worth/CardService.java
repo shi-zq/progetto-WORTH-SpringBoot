@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-// Service 检查卡片归属，并调用 Repository。
 // ownerId 由 Controller 从已验证的 Session 获取，不能来自请求正文。
 @Service
 public class CardService {

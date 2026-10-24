@@ -26,7 +26,6 @@ public class CardController {
     public record CreateCardRequest(String name, String description) {}
     // PATCH：未提供或为 null 的字段保留原值；不允许两个字段都不提供。
     public record UpdateCardRequest(String name, String description) {}
-    // JSON 示例：{"status":"INPROGRESS"}；未知枚举字符串由 Spring 返回 400。
     public record UpdateStatusRequest(Status status) {}
     public record CardResponse(long id, String name, String description, Status status) {}
     public record ErrorResponse(String message) {}
@@ -40,13 +39,11 @@ public class CardController {
 
         Object value = current.getAttribute("userId");
 
-        // 同时排除属性不存在（null）和类型错误的情况。
         if (!(value instanceof Long)) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED, "Not logged in");
         }
 
-        // 登录时保存的是 Long；检查类型后才能安全转换。
         long userId = (Long) value;
         try {
             authService.getCurrentUser(userId);
